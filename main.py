@@ -1,5 +1,3 @@
-# The class `Database` represents a SQLite database and provides methods for interacting with tables,
-# columns, data, and database operations.
 import os
 import sqlite3
 

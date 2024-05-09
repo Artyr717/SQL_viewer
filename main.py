@@ -118,8 +118,52 @@ class Database:
         else:
             print("Successful!")
 
+    def create_table(self, table: str):
+        """
+        Creates a new table in the database.
+
+        Args:
+            table (str): The name of the table to be created.
+        """
+        try:
+            self.cur.execute(f"CREATE TABLE {table} (id INTEGER PRIMARY KEY)")
+            self.conn.commit()
+        except Exception as e:
+            print(f"Error | Method - create_table: {str(e)}")
+
+    def create_column(self, column: str, table: str):
+        """
+        Creates a new column in a table.
+
+        Args:
+            column (str): The name of the column to be created.
+            table (str): The name of the table in which the column is to be created.
+        """
+        try:
+            self.cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} TEXT")
+            self.conn.commit()
+        except Exception as e:
+            print(f"Error | Method - create_column: {str(e)}")
+
+    def create_record(self, table: str, column: str, value: str):
+        """
+        Creates a new record in a table.
+
+        Args:
+            table (str): The name of the table in which the record is to be created.
+            column (str): The name of the column in which the record is to be created.
+            value (str): The value of the record to be created.
+        """
+        try:
+            self.cur.execute(f"INSERT INTO {table} ({column}) VALUES (?)", (value,))
+            self.conn.commit()
+        except Exception as e:
+            print(f"Error | Method - create_record: {str(e)}")
+
 
 print("| SQL-Viewer |")
+
+db = None
 
 while True:
 
@@ -168,14 +212,17 @@ while True:
         elif command.lower() == "columns":
             if db is not None:
                 table = input("Table name: ")
-                print(f"\nColumns in {table}: {db.get_all_columns(table)}")
+                # print(f"\nColumns in {table}: {db.get_all_columns(table)}")
+                for column in db.get_all_columns(table):
+                    print(column)
             else:
                 print("\nNo database selected.")
 
         elif command.lower() == "data":
             if db is not None:
                 table = input("Table name: ")
-                print(f"\nData in {table}: {db.get_all_data(table)}")
+                for row in db.get_all_data(table):
+                    print(row)
             else:
                 print("\nNo database selected.")
 

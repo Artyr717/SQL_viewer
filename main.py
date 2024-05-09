@@ -1,3 +1,5 @@
+# The class `Database` represents a SQLite database and provides methods for interacting with tables,
+# columns, data, and database operations.
 import os
 import sqlite3
 
@@ -20,7 +22,23 @@ class Database:
             nameDB (str): The name of the database file.
         """
         if not os.path.exists("files/"+nameDB):
-            print("File not found")
+            fail = input("Database not found. Create a new database? (y/n): ")
+            if fail in ["y", "Y", "yes", "Yes"]:
+                self.nameDB = nameDB
+                if ".db" not in self.nameDB:
+                    self.conn = sqlite3.connect("files/"+self.nameDB+".db")
+                else:
+                    self.conn = sqlite3.connect("files/"+self.nameDB)
+                self.cur = self.conn.cursor()
+
+            elif fail in ["n", "N", "no", "No"]:
+                print("Exiting...")
+                exit()
+
+            else:
+                print("Invalid input. Exiting...")
+                exit()
+
         else:
             self.nameDB = nameDB
             self.conn = sqlite3.connect("files/"+self.nameDB)
@@ -139,8 +157,22 @@ class Database:
             column (str): The name of the column to be created.
             table (str): The name of the table in which the column is to be created.
         """
+        type = input("Enter the type: ")
+        if type == "INTEGER":
+            patametr = input("Make primary key? (y/n): ")
+            if patametr == "y":
+                type = "INTEGER PRIMARY KEY"
+            else:
+                type = "INTEGER"
+
+        if type == "TEXT":
+            pass
+
+        else:
+            print("Invalid type")
+            return
         try:
-            self.cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} TEXT")
+            self.cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {type.upper()}")
             self.conn.commit()
         except Exception as e:
             print(f"Error | Method - create_column: {str(e)}")
@@ -160,6 +192,17 @@ class Database:
         except Exception as e:
             print(f"Error | Method - create_record: {str(e)}")
 
+    def DeleteDatabase(self):
+        """
+        Deletes the database.
+        """
+        try:
+            self.conn.close()
+            os.remove(f"files/{self.nameDB}")
+            print("Successful!")
+        except Exception as e:
+            print(f"Error | Method - DeleteDatabase: {str(e)}")
+
 
 print("| SQL-Viewer |")
 
@@ -171,56 +214,72 @@ while True:
     formatted_databases = ', '.join(databases)
 
     try:
+        
         command = input("\n>>> ")
 
-        if "select " in command.lower():
+        if command.lower() in ["help", "commands"]:
+            print("""Available commands:
+                  
+                  help - show this help
+                  select - select database
+                  showdbs - show available databases
+                  get_tables - show tables in selected database
+                  get_columns - show columns in selected table
+                  get_data - show data in selected table
+                  del_table - delete table in selected database
+                  del_column - delete column in selected table
+                  del_record - delete record in selected table
+                  create_table - create new table in selected database
+                  create_column - create new column in selected table
+                  create_record - create new record in selected table
+                  delete_database - delete selected database
+                  exit - exit the program""")
+
+        elif "select " in command.lower():
             print("\nSelecting database...")
             select = command.split(" ")[1]
-            if select in databases:
+            if select == "" or select == " ":
+                print("\nNo database selected. Try again.")
+            else:
                 db = Database(select)
                 print(f"\nSelected database: {select}")
-            else:
-                print("\nDatabase not found.")
 
         elif command.lower() == "exit":
             print("\nGoodbye!")
             break
 
-        elif command.lower() in ["help", "commands"]:
-            print("""Available commands:
-                  
-                  help - show this help
-                  select - select database
-                  databases - show available databases
-                  tables - show tables in selected database
-                  columns - show columns in selected table
-                  data - show data in selected table
-                  del_table - delete table in selected database
-                  del_column - delete column in selected table
-                  del_record - delete record in selected table
-                  exit - exit the program""")
+        elif command.lower() == "showdbs":
+            if not databases:
+                print("\nNo databases found. Try again.")
+            else:
+                print(f"\nAvailable databases: {formatted_databases}")
 
-        elif command.lower() == "databases":
-            print(f"\nAvailable databases: {formatted_databases}")
-
-        elif command.lower() == "tables":
+        elif command.lower() == "get_tables":
             if db is not None:
-                print(f"\nTables in {select}: {db.get_all_tabels()}")
+                if db.get_all_tabels() == []:
+                    print("\nNo tables in selected Database.")
+                else:
+                    print(f"\nTables in {select}:")
+                    
+                    print("""╔════════════════╗""")
+                    for table in db.get_all_tabels():
+                        print(" "*8 +table[0])
+                    print("""╚════════════════╝""")
             else:
                 print("\nNo database selected.")
 
-        elif command.lower() == "columns":
+        elif command.lower() == "get_columns":
             if db is not None:
                 table = input("Table name: ")
-                # print(f"\nColumns in {table}: {db.get_all_columns(table)}")
                 for column in db.get_all_columns(table):
                     print(column)
             else:
                 print("\nNo database selected.")
 
-        elif command.lower() == "data":
+        elif command.lower() == "get_data":
             if db is not None:
                 table = input("Table name: ")
+                print(f"\nData in {table}:")
                 for row in db.get_all_data(table):
                     print(row)
             else:
@@ -250,10 +309,41 @@ while True:
             else:
                 print("\nNo database selected.")
 
+        elif command.lower() == "create_table":
+            if db is not None:
+                table = input("\nTable name: ")
+                db.create_table(table)
+            else:
+                print("\nNo database selected.")
+
+        elif command.lower() == "create_column":
+            if db is not None:
+                table = input("\nTable name: ")
+                column = input("\nColumn name: ")
+                db.create_column(column, table)
+            else:
+                print("\nNo database selected.")
+
+        elif command.lower() == "create_record":
+            if db is not None:
+                table = input("\nTable name: ")
+                column = input("\nColumn name: ")
+                value = input("\nValue: ")
+                db.create_record(table, column, value)
+            else:
+                print("\nNo database selected.")
+
+        elif command.lower() == "delete_database":
+            if db is not None:
+                db.DeleteDatabase()
+            else:
+                print("\nNo database selected.")
+
     except Exception as e:
         print(f"\nError: {str(e)}")
 
     except KeyboardInterrupt:
         print("\nGoodbye!")
         break
+
 

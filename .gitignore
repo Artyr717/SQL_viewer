@@ -1,1 +1,7 @@
 /generate_db.py
+/files
+/logs
+/SQL_viewer
+/dist
+/build
+/__pycache__

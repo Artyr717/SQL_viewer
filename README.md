@@ -12,6 +12,7 @@ I used OOP as well as libraries such as: Sqlite3, os.
 Clone the repository.
 
 ## Usage
-`python main.py`
-or
-`python3 main.py`
+
+1. Run `pip install requirements.txt`
+
+2. Run `python main.py` or `python3 main.py`

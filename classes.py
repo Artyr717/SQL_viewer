@@ -42,7 +42,7 @@ class Database:
             self.conn = sqlite3.connect("files/"+self.nameDB)
             self.cur = self.conn.cursor()
 
-    def get_all_tabels(self):
+    def get_all_tables(self):
         """
         Returns all tables in the database.
 
@@ -142,7 +142,7 @@ class Database:
             table (str): The name of the table to be created.
         """
         try:
-            self.cur.execute(f"CREATE TABLE {table} (id INTEGER PRIMARY KEY)")
+            self.cur.execute(f"CREATE TABLE {table} (IgnoreOrDelete TEXT)")
             self.conn.commit()
         except Exception as e:
             print(f"Error | Method - create_table: {str(e)}")
@@ -159,7 +159,7 @@ class Database:
             return
     
         type = input("Enter the type: ")
-        if type.upper() == "INTEGER":
+        if type.upper() in ["INTEGER", "TEXT", "REAL"]:
             parameters = [type.upper()]
             p_k = "PRIMARY KEY"
             d_v = "DEFAULT "
@@ -177,55 +177,114 @@ class Database:
                     return
             parameters = " ".join(parameters)
     
-        elif type.upper() == "TEXT":
-            pass
-    
         else:
             print("Invalid type. Please enter 'integer' or 'text'.")
             return
     
         try:
-            if type.upper() == "INTEGER":
+            if type.upper() in ["INTEGER", "TEXT", "REAL"]:
                 self.cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {parameters};")
-            elif type.upper() == "TEXT":
-                self.cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {type.upper()};")
+            # elif type.upper() == "TEXT":
+            #     self.cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {type.upper()};")
             self.conn.commit()
             print(f"Column '{column}' added to table '{table}'.")
         except sqlite3.OperationalError as e:
             print(f"Error | Method - create_column: {str(e)}")
 
-    def create_record(self, table: str, column: str, value: str):
+    def create_record(self, table: str):
         """
-        Creates a new record in a table.
-
+        Создает новую запись в таблице.
+    
         Args:
-            table (str): The name of the table in which the record is to be created.
-            column (str): The name of the column in which the record is to be created.
-            value (str): The value of the record to be created.
+            table (str): Название таблицы, в которой нужно создать запись.
         """
         try:
-            self.cur.execute(f"INSERT INTO {table} ({column}) VALUES (?)", (value,))
+            columns = self.get_all_columns(table)
+            if not columns:
+                raise ValueError(f"Table {table} not found.")
+    
+            non_primary_columns = [column[1] for column in columns if column[5] != 1]
+            values = []
+            for column in non_primary_columns:
+                value = input(f"Enter value for {column}: ")
+                values.append(value)
+    
+            if len(values) != len(non_primary_columns):
+                raise ValueError("The number of provided values does not correspond to the number of columns, excluding the first and second columns.")
+    
+            sql = f"INSERT INTO {table} ({', '.join(non_primary_columns)}) VALUES ({', '.join('?' for _ in values)})"
+            self.cur.execute(sql, values)
             self.conn.commit()
         except Exception as e:
             print(f"Error | Method - create_record: {str(e)}")
         else:
-            print(f"\nSuccessful!\nCreated record: {value}\nTable: {table}\nDatabase: {self.nameDB}")
+            values = ", ".join(values)
+            print(f"\nSuccessful!\nTable: {table}\nDatabase: {self.nameDB}\nRecord: {values}")
 
-    def DeleteDatabase(self):
+    def rename_table(self, old_name: str, new_name: str):
         """
-        Deletes the database.
+        Renames a table.
+
+        Args:
+            old_name (str): The name of the table to be renamed.
+            new_name (str): The new name for the table.
         """
-        question = input(f"Delete database {self.nameDB}? (y/n): ")
-        if question in ["y", "Y", "yes", "Yes"]:
-            try:
-                self.conn.close()
-                os.remove(f"files/{self.nameDB}")
-                print("\nSuccessful!")
-                
-            except Exception as e:
-                print(f"Error | Method - DeleteDatabase: {str(e)}")
+        try:
+            self.cur.execute(f"ALTER TABLE {old_name} RENAME TO {new_name}")
+            self.conn.commit()
+        except Exception as e:
+            print(f"Error | Method - rename_table: {str(e)}")
+        else:
+            print(f"Successful!\nTable: {old_name}\nDatabase: {self.nameDB}\nNew name: {new_name}")
 
-        elif question in ["n", "N", "no", "No"]:
-            print("Canceling the action.")
-        
+    def rename_column(self, table: str, old_name: str, new_name: str):
+        """
+        Renames a column in a table.
 
+        Args:
+            table (str): The name of the table in which the column is to be renamed.
+            old_name (str): The name of the column to be renamed.
+            new_name (str): The new name for the column.
+        """
+        try:
+            self.cur.execute(f"ALTER TABLE {table} RENAME COLUMN {old_name} TO {new_name}")
+            self.conn.commit()
+        except Exception as e:
+            print(f"Error | Method - rename_column: {str(e)}")
+        else:
+            print(f"Successful!\nTable: {table}\nDatabase: {self.nameDB}\nColumn: {old_name}\nNew name: {new_name}")
+
+    def edit_column(self, table: str, column: str, new_type: str):
+        """
+        Edits the type of a column in a table.
+
+        Args:
+            table (str): The name of the table in which the column is to be edited.
+            column (str): The name of the column to be edited.
+            new_type (str): The new type for the column.
+        """
+        try:
+            self.cur.execute(f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {new_type}")
+            self.conn.commit()
+        except Exception as e:
+            print(f"Error | Method - edit_column: {str(e)}")
+        else:
+            print(f"Successful!\nTable: {table}\nDatabase: {self.nameDB}\nColumn: {column}\nNew type: {new_type}")
+
+    def edit_record(self, table: str, column: str, value: str, new_value: str):
+        """
+        Edits a record in a table.
+
+        Args:
+            table (str): The name of the table in which the record is to be edited.
+            column (str): The name of the column in which the record is to be edited.
+            value (str): The value of the record to be edited.
+            new_value (str): The new value for the record.
+        """
+        try:
+            self.cur.execute(f"UPDATE {table} SET {column} = ? WHERE {column} = ?", (new_value, value))
+            self.conn.commit()
+        except Exception as e:
+            print(f"Error | Method - edit_record: {str(e)}")
+        else:
+            print(f"Successful!\nTable: {table}\nDatabase: {self.nameDB}\nColumn: {column}\nValue: {value}\nNew value: {new_value}")

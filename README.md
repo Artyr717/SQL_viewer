@@ -16,3 +16,5 @@ Clone the repository.
 1. Run `pip install requirements.txt`
 
 2. Run `python main.py` or `python3 main.py`
+
+## If you find a bug or a problem, please let me know immediately!
